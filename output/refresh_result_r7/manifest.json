@@ -1,0 +1,27 @@
+﻿{
+    "firmware_id":  "wait-nfc-image-r7-refresh-result",
+    "app_version":  "1.4",
+    "version_code":  5,
+    "tests_passed":  27,
+    "cortex_m0_tests_passed":  true,
+    "flashed":  false,
+    "installed_on_phone":  false,
+    "real_power_and_busy_validation":  "pending",
+    "files":  [
+                  {
+                      "name":  "epaper_nfc_app_1_4.apk",
+                      "bytes":  11888408,
+                      "sha256":  "539f963770852c58be349d110c4ec8ae6792c44d4ce02497366f893ecb43b692"
+                  },
+                  {
+                      "name":  "epaper_NFC_r7_refresh_result.hex",
+                      "bytes":  109186,
+                      "sha256":  "f3dafea0dab533d4b240561133ccc442e4a84020e992106eef49d125494a69dd"
+                  },
+                  {
+                      "name":  "README.md",
+                      "bytes":  6593,
+                      "sha256":  "727c38e791f279ec1f1c7f06481e999284488418819a03f65d4fe59e624140a2"
+                  }
+              ]
+}

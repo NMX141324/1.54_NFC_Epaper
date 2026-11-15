@@ -1,0 +1,13 @@
+﻿{
+    "firmware_id":  "colors-wait-nfc-1234-r4-gpo",
+    "file":  "build/Debug/epaper_NFC.elf",
+    "elf_sha256":  "9a3d48b7d75e0b8cbbc32e088c61d18882d76116bb1d88616e3e01195f15f6c3",
+    "bin_sha256":  "fe763ccc6f3998b2b0ea6d3709b0ad54a22c71a00ca1cf51f0d61ebc1ee9161e",
+    "probe_serial":  "37FF71064E573436AC5F1043",
+    "download_verified":  true,
+    "software_reset_completed":  true,
+    "debugger_connected_during_phone_test":  false,
+    "phone_command_sequence":  13,
+    "screen_confirmation":  "User confirmed 1234 displayed after phone command sequence 13.",
+    "phone_command_passed":  true
+}

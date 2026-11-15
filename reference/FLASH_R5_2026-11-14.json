@@ -1,0 +1,11 @@
+﻿{
+    "firmware_id":  "colors-wait-nfc-image-r5-ftm",
+    "file":  "build/Debug/epaper_NFC.elf",
+    "elf_sha256":  "a5c089a4d709276758e264c427b8ccc2066994a46d7934b3aded88f8183077b2",
+    "bin_sha256":  "5380bf52b6f58b26d31f0f44c3fd1113aa4022e84799fa955b687b87f6e5b393",
+    "probe_serial":  "37FF71064E573436AC5F1043",
+    "download_verified":  true,
+    "software_reset_completed":  true,
+    "phone_image_test":  "pending",
+    "debugger_connected_during_phone_test":  false
+}

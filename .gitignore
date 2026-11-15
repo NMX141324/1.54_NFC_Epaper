@@ -1,0 +1,13 @@
+build/
+.gradle/
+.kotlin/
+.idea/
+/.settings/
+/NFC_APP/local.properties
+__pycache__/
+*.py[cod]
+*.iml
+*.jks
+*.keystore
+.DS_Store
+Thumbs.db

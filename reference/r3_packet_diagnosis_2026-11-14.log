@@ -1,0 +1,91 @@
+=cmd-param-changed,param="logging enabled",value="on"
+^done
+(gdb) 
+=thread-group-started,id="i1",pid="42000"
+=thread-created,id="1",group-id="i1"
+~"Reset_Handler () at D:/LCEDA Document/Project/epaper_NFC/Src\\startup_stm32g070xx.S:56\n"
+~"56\t  ldr   r0, =_estack\n"
+*stopped,frame={addr="0x08000ad0",func="Reset_Handler",args=[],file="D:/LCEDA Document/Project/epaper_NFC/Src\\startup_stm32g070xx.S",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\startup_stm32g070xx.S",line="56",arch="armv6s-m"},thread-id="1",stopped-threads="all",core="0"
+^connected
+(gdb) 
+~"Note: automatically using hardware breakpoints for read-only addresses.\n"
+^done,bkpt={number="1",type="breakpoint",disp="del",enabled="y",addr="0x080005e0",func="run_boot_sequence",file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="83",thread-groups=["i1"],times="0",original-location="run_boot_sequence"}
+(gdb) 
+^running
+*running,thread-id="all"
+(gdb) 
+=breakpoint-modified,bkpt={number="1",type="breakpoint",disp="del",enabled="y",addr="0x080005e0",func="run_boot_sequence",file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="83",thread-groups=["i1"],times="1",original-location="run_boot_sequence"}
+~"\n"
+~"Temporary breakpoint 1, run_boot_sequence () at D:/LCEDA Document/Project/epaper_NFC/Src/main.c:83\n"
+~"83\t    g_debug.boot_phase=1u;\n"
+*stopped,reason="breakpoint-hit",disp="del",bkptno="1",frame={addr="0x080005e0",func="run_boot_sequence",args=[],file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="83",arch="armv6s-m"},thread-id="1",stopped-threads="all",core="0"
+=breakpoint-deleted,id="1"
+~"$1 = {magic = 1162888241, stage = 3, command = 0, busy_active_low = 1, uptime_ms = 0, heartbeat = 0, nfc_present = 1, nfc_error = 0, uid_lsb_first = \"\317\330\237\360\\000$\", <incomplete sequence \\340>, uid_hex = \"E0022400F09FD8CF\", refresh_count = 0, epd_error = 0, command_count = 0, last_sequence = 0, last_opcode = 0, last_status = 0, ack_error = 0, protocol_armed = 1, busy_pin = 0, gpo_pin = 0, fault = 0, boot_phase = 0, boot_colors_done_ms = 0, boot_uid_start_ms = 0, reset_flags = 335544320, firmware_id = 0x8001ec0 <g_firmware_id> \"colors-wait-nfc-1234-r3-gpo\", nfc_gpo_ready = 1, nfc_init_error = 0, nfc_gpo_events = 0, nfc_pending = 0, nfc_read_attempts = 0, nfc_read_errors = 0}\n"
+^done
+(gdb) 
+~"#1  0x080009ac in main () at D:/LCEDA Document/Project/epaper_NFC/Src/main.c:183\n"
+~"183\t    run_boot_sequence();\n"
+=thread-selected,id="1",frame={level="1",addr="0x080009ac",func="main",args=[],file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="183",arch="armv6s-m"}
+^done
+(gdb) 
+~"$2 = {tracker = {baselined = true, have_seq = true, seq = 11 '\\v'}, seen_events = 0, event_at = 0, retry_at = 0, ack_at = 0, pending = false, ack_pending = false, attempts = 0, ack_attempts = 0, ack_seq = 0 '\\000', ack_status = 0 '\\000'}\n"
+^done
+(gdb) 
+~"$3 = 0\n"
+^done
+(gdb) 
+~"0x20008000:\t0xa5\t0x06\t0x0b\t0xa8\t0x50\t0xc0\t0x03\t0xa0\n"
+^done
+(gdb) 
+~"#0  run_boot_sequence () at D:/LCEDA Document/Project/epaper_NFC/Src/main.c:83\n"
+~"83\t    g_debug.boot_phase=1u;\n"
+=thread-selected,id="1",frame={level="0",addr="0x080005e0",func="run_boot_sequence",args=[],file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="83",arch="armv6s-m"}
+^done
+(gdb) 
+^done,bkpt={number="2",type="breakpoint",disp="del",enabled="y",addr="0x0800072a",func="nfc_service",file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="130",thread-groups=["i1"],times="0",original-location="nfc_service"}
+(gdb) 
+^running
+*running,thread-id="all"
+(gdb) 
+=breakpoint-modified,bkpt={number="2",type="breakpoint",disp="del",enabled="y",addr="0x0800072a",func="nfc_service",file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="130",thread-groups=["i1"],times="1",original-location="nfc_service"}
+~"\n"
+~"Temporary breakpoint 2, nfc_service (s=0x20008fb8, now=33243) at D:/LCEDA Document/Project/epaper_NFC/Src/main.c:130\n"
+~"130\t    if (!g_debug.nfc_gpo_ready) { return; }\n"
+*stopped,reason="breakpoint-hit",disp="del",bkptno="2",frame={addr="0x0800072a",func="nfc_service",args=[{name="s",value="0x20008fb8"},{name="now",value="33243"}],file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="130",arch="armv6s-m"},thread-id="1",stopped-threads="all",core="0"
+=breakpoint-deleted,id="2"
+~"$4 = {tracker = {baselined = true, have_seq = true, seq = 11 '\\v'}, seen_events = 0, event_at = 0, retry_at = 0, ack_at = 0, pending = false, ack_pending = false, attempts = 0, ack_attempts = 0, ack_seq = 0 '\\000', ack_status = 0 '\\000'}\n"
+^done
+(gdb) 
+^done,bkpt={number="3",type="breakpoint",disp="keep",enabled="y",addr="0x08000840",func="nfc_service",file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="154",thread-groups=["i1"],times="0",original-location="Src/main.c:154"}
+(gdb) 
+^done
+(gdb) 
+^done,bkpt={number="4",type="breakpoint",disp="keep",enabled="y",addr="0x08000852",func="nfc_service",file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="155",thread-groups=["i1"],times="0",original-location="Src/main.c:155"}
+(gdb) 
+^done
+(gdb) 
+^running
+*running,thread-id="all"
+(gdb) 
+=breakpoint-modified,bkpt={number="3",type="breakpoint",disp="keep",enabled="y",addr="0x08000840",func="nfc_service",file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="154",thread-groups=["i1"],times="1",script={"silent","printf \"PACKET %02x %02x %02x %02x baseline_seq=%u valid=%u\\n\", b[0],b[1],b[2],b[3],s->tracker.seq,(b[3]==(b[0]^b[1]^b[2]))","continue"},original-location="Src/main.c:154"}
+*stopped
+~"PACKET 00 06 0b a8 baseline_seq=11 valid=0\n"
+*running,thread-id="all"
+=breakpoint-modified,bkpt={number="3",type="breakpoint",disp="keep",enabled="y",addr="0x08000840",func="nfc_service",file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="154",thread-groups=["i1"],times="2",script={"silent","printf \"PACKET %02x %02x %02x %02x baseline_seq=%u valid=%u\\n\", b[0],b[1],b[2],b[3],s->tracker.seq,(b[3]==(b[0]^b[1]^b[2]))","continue"},original-location="Src/main.c:154"}
+*stopped
+~"PACKET 00 06 0b a8 baseline_seq=11 valid=0\n"
+*running,thread-id="all"
+=breakpoint-modified,bkpt={number="3",type="breakpoint",disp="keep",enabled="y",addr="0x08000840",func="nfc_service",file="D:/LCEDA Document/Project/epaper_NFC/Src/main.c",fullname="D:\\LCEDA Document\\Project\\epaper_NFC\\Src\\main.c",line="154",thread-groups=["i1"],times="3",script={"silent","printf \"PACKET %02x %02x %02x %02x baseline_seq=%u valid=%u\\n\", b[0],b[1],b[2],b[3],s->tracker.seq,(b[3]==(b[0]^b[1]^b[2]))","continue"},original-location="Src/main.c:154"}
+*stopped
+~"PACKET 00 06 0c a8 baseline_seq=11 valid=0\n"
+*running,thread-id="all"
+&"Warning:\n"
+&"Cannot insert hardware breakpoint 3:Remote failure reply: 31.\n"
+&"\n"
+~"Cannot remove breakpoints because program is no longer writable.\nFurther execution is probably impossible.\n"
+~"Ignoring packet error, continuing...\n"
+~"0x08000842 in nfc_service (Ignoring packet error, continuing...\n"
+~"s=<error reading variable: Invalid hex digit 116>, now=Ignoring packet error, continuing...\n"
+~"<error reading variable: Invalid hex digit 116>) at D:/LCEDA Document/Project/epaper_NFC/Src/main.c:154\n"
+~"154\t            if (command_accept(&s->tracker,b)) {\n"
+*stopped,thread-id="1",stopped-threads="all",core="0"

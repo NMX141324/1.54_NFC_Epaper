@@ -1,0 +1,15 @@
+﻿{
+    "firmware_id":  "colors-wait-nfc-image-r5.1-ftm",
+    "elf_sha256":  "ba257d3d0fe02c3181023731b1895ca44b610a52e1a49515815c8112ffa2193c",
+    "bin_sha256":  "bc5bbef238a4ee3e3b5610a14e898efca710fe66eb7b4c028eba90b7047663b2",
+    "download_verified":  true,
+    "software_reset_completed":  true,
+    "nfc_ready_observed":  1,
+    "nfc_init_error_observed":  0,
+    "phone_image_test":  "User confirmed IMAGE 1, then IMAGE 2 without MCU reset.",
+    "debugger_connected_during_phone_test":  false,
+    "image1_file_bytes":  28832,
+    "image1_pixel_crc32":  "97224EB2",
+    "image2_phone_to_screen_passed":  true,
+    "h2r_readback_hardware_tested":  false
+}

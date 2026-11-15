@@ -1,0 +1,70 @@
+{
+  "samples": 57,
+  "field_on": 47,
+  "field_off": 8,
+  "i2c_errors": 2,
+  "transitions": [
+    {
+      "from": {
+        "index": 17,
+        "tick_ms": 908,
+        "i2c_result": 0,
+        "eh_ctrl": "0x0c",
+        "field_on": 1,
+        "vcc_on": 1,
+        "rcc_csr": "0x00000000"
+      },
+      "to": {
+        "index": 18,
+        "tick_ms": 960,
+        "i2c_result": 0,
+        "eh_ctrl": "0x08",
+        "field_on": 0,
+        "vcc_on": 1,
+        "rcc_csr": "0x00000000"
+      }
+    },
+    {
+      "from": {
+        "index": 19,
+        "tick_ms": 1012,
+        "i2c_result": 0,
+        "eh_ctrl": "0x08",
+        "field_on": 0,
+        "vcc_on": 1,
+        "rcc_csr": "0x00000000"
+      },
+      "to": {
+        "index": 20,
+        "tick_ms": 1064,
+        "i2c_result": 0,
+        "eh_ctrl": "0x0c",
+        "field_on": 1,
+        "vcc_on": 1,
+        "rcc_csr": "0x00000000"
+      }
+    },
+    {
+      "from": {
+        "index": 50,
+        "tick_ms": 2620,
+        "i2c_result": 0,
+        "eh_ctrl": "0x0c",
+        "field_on": 1,
+        "vcc_on": 1,
+        "rcc_csr": "0x00000000"
+      },
+      "to": {
+        "index": 51,
+        "tick_ms": 2672,
+        "i2c_result": 0,
+        "eh_ctrl": "0x08",
+        "field_on": 0,
+        "vcc_on": 1,
+        "rcc_csr": "0x00000000"
+      }
+    }
+  ],
+  "incomplete": true,
+  "note": "ST-Link 3.3V removal occurred during/after sampling; exact wall-clock boundary is not recorded. Tick timestamps advance only while inferior runs."
+}

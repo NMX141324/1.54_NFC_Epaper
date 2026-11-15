@@ -1,0 +1,12 @@
+﻿{
+    "firmware_id":  "wait-nfc-image-r6.1-arbitration",
+    "configuration":  "Release",
+    "flashed_at":  "2026-11-14T23:10:07.1734512+08:00",
+    "probe_serial":  "37FF71064E573436AC5F1043",
+    "device_id":  "0x460",
+    "file":  "epaper_NFC_r6_1_arbitration.hex",
+    "hex_sha256":  "f1b34ffd41d652f991b47283b38338f61d987952605794a20eb14242cd665591",
+    "download_verified":  true,
+    "software_reset_performed":  true,
+    "phone_validation":  "pending"
+}

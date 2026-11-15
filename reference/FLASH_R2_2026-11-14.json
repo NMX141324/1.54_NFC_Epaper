@@ -1,0 +1,15 @@
+﻿{
+    "firmware_id":  "colors-wait-nfc-1234-r2",
+    "flashed_at":  "2026-11-14T15:46:51.5798432+08:00",
+    "probe_serial":  "37FF71064E573436AC5F1043",
+    "device_id":  "0x460",
+    "file":  "build/Debug/epaper_NFC.elf",
+    "elf_sha256":  "c7ec8a3c0cc49e1d637964fbe4982805fb85deebc4fe7f3696e3a8e4239c1b5e",
+    "bin_sha256":  "e71867d1de1764eed8969ab8e7d72e37adc83ceac5b8cd4e23c13adf9fb8edc7",
+    "download_verified":  true,
+    "software_reset_completed":  true,
+    "screen_confirmed":  true,
+    "runtime_memory_validated":  false,
+    "runtime_memory_note":  "HOTPLUG read returned invalid device identification and inconsistent RAM; not used as runtime evidence.",
+    "screen_observation":  "User confirmed six-color screen remains displayed; no automatic UID screen."
+}
