@@ -8,4 +8,4 @@ $elf=Join-Path $taskRoot "build/$Configuration/epaper_NFC.elf"
 if (!(Test-Path -LiteralPath $elf)) { throw 'Build firmware first with tools/build.ps1' }
 & $cli.FullName -c port=SWD mode=NORMAL reset=SWrst freq=140 -d $elf -v -rst
 if ($LASTEXITCODE) { throw 'ST-Link download failed' }
-Write-Host 'If first programming leaves the MCU in ROM bootloader, fully power-cycle the board (including probe back-power), or clear FLASH_ACR.PROGEMPTY through the debugger before reset. No option-byte change is needed.'
+Write-Host 'Firmware programmed, verified and reset.'

@@ -4,12 +4,12 @@
 
 static struct {
     uint32_t events,last_attempt;unsigned tries;
-    uint8_t irq_status;bool pending,mailbox,irq_pending;
+    uint8_t irq_status;bool pending,irq_pending;
 } link;
 void image_link_init(void)
 {
     link.events=board_nfc_write_events();link.last_attempt=0u;
-    link.tries=0u;link.pending=false;link.mailbox=false;
+    link.tries=0u;link.pending=false;
     link.irq_status=0u;link.irq_pending=false;
     image_transfer_init();
 }
@@ -19,7 +19,7 @@ void image_link_reply_ready(uint32_t now)
      * Idle still never polls I2C. A phone RF_GET IRQ is not required here. */
     link.pending=true;link.tries=0u;link.last_attempt=now-5u;
 }
-bool image_link_service(uint32_t now)
+void image_link_service(uint32_t now)
 {
     uint32_t events=board_nfc_write_events();
     if (events!=link.events) {
@@ -31,9 +31,9 @@ bool image_link_service(uint32_t now)
     }
     if (image_transfer_tick(now)) {
         int r=st25_mailbox_enable(false);
-        g_image_debug.link_error=r;link.pending=false;link.mailbox=false;
+        g_image_debug.link_error=r;link.pending=false;
     }
-    if (!link.pending || (uint32_t)(now-link.last_attempt)<5u) { return link.mailbox; }
+    if (!link.pending || (uint32_t)(now-link.last_attempt)<5u) { return; }
     link.last_attempt=now;++link.tries;
     uint8_t control=0u;
     int r=0;
@@ -45,13 +45,12 @@ bool image_link_service(uint32_t now)
     if (!r) { r=st25_mailbox_control(&control); }
     g_image_debug.mailbox_control=control;
     if (!r) {
-        link.mailbox=(control&1u)!=0u;
-        if (!link.mailbox) {
+        if (!(control&1u)) {
             if (image_transfer_inflight() && (link.irq_status&0x40u)) {
                 image_transfer_released(now);
             }
             image_transfer_link_closed();
-            link.pending=false;link.tries=0u;link.irq_status=0u;return false;
+            link.pending=false;link.tries=0u;link.irq_status=0u;return;
         }
         if (!(control&2u) && image_transfer_inflight()) { image_transfer_released(now); }
         if (control&4u) {
@@ -73,5 +72,5 @@ bool image_link_service(uint32_t now)
         ++g_image_debug.link_retries;
         if (link.tries>=20u) { link.pending=false;++g_image_debug.link_failures; }
     }
-    return link.mailbox;
+    return;
 }

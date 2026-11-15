@@ -10,13 +10,31 @@
       "toolchain_prefix": "",
       "sources": [
         {
+          "path": "Src/main.c"
+        },
+        {
+          "path": "Src/board.c"
+        },
+        {
+          "path": "Src/epd.c"
+        },
+        {
+          "path": "Src/st25dv.c"
+        },
+        {
+          "path": "Src/image_transfer.c"
+        },
+        {
+          "path": "Src/image_link.c"
+        },
+        {
+          "path": "Src/status_led.c"
+        },
+        {
           "path": "Src/syscall.c"
         },
         {
           "path": "Src/sysmem.c"
-        },
-        {
-          "path": "Src/main.c"
         },
         {
           "path": "Src/startup_stm32g070xx.S"
@@ -122,13 +140,31 @@
       "toolchain_prefix": "",
       "sources": [
         {
+          "path": "Src/main.c"
+        },
+        {
+          "path": "Src/board.c"
+        },
+        {
+          "path": "Src/epd.c"
+        },
+        {
+          "path": "Src/st25dv.c"
+        },
+        {
+          "path": "Src/image_transfer.c"
+        },
+        {
+          "path": "Src/image_link.c"
+        },
+        {
+          "path": "Src/status_led.c"
+        },
+        {
           "path": "Src/syscall.c"
         },
         {
           "path": "Src/sysmem.c"
-        },
-        {
-          "path": "Src/main.c"
         },
         {
           "path": "Src/startup_stm32g070xx.S"

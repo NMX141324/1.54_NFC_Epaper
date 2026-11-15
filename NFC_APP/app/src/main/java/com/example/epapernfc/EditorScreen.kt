@@ -183,7 +183,7 @@ fun EditorScreen(
                     Text(when {
                         !hasNfc -> "本机无 NFC，仍可编辑并导出 E6IM 文件。"
                         !nfcEnabled -> "NFC 尚未开启，请在系统设置中打开。"
-                        else -> "ST25DV04K · Mailbox · 兼容 r5.1 固件"
+                        else -> "ST25DV04K · NFC 图片传输"
                     }, style = MaterialTheme.typography.bodySmall)
                     if (hasNfc && !nfcEnabled) OutlinedButton(onClick = onNfcSettings) { Text("打开 NFC 设置") }
                     Text(state.status, style = MaterialTheme.typography.bodyMedium)
@@ -201,7 +201,7 @@ fun EditorScreen(
                             Text("通过 NFC 发送图片")
                         }
                     }
-                    Text("上电保留原画面，直接等待传图。发送时保持贴紧；稳定性对照请外接 3.3V。收图后仍需保持供电，等待屏幕刷新完成。",
+                    Text("上电保留原画面，直接等待传图。发送和刷新期间请保持供电、手机贴紧，收到“刷新完成”后再移开。",
                         style = MaterialTheme.typography.bodySmall)
                 }
             }

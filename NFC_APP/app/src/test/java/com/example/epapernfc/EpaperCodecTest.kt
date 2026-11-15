@@ -3,7 +3,6 @@ package com.example.epapernfc
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.zip.CRC32
@@ -103,25 +102,6 @@ class EpaperCodecTest {
                 assertArrayEquals(payload, decode(FtmCodec.segments(payload, limit), limit))
             }
         }
-    }
-
-    @Test fun createAndroidWireFixtureForActualCortexMReceiver() {
-        val raw = EpaperCodec.quantize(IntArray(57600) { EpaperCodec.colors[(it % 240) / 40] }, Dither.NONE, 1f)
-        val file = EpaperCodec.file(raw, 0x41505001)
-        val segments = FtmCodec.segments(byteArrayOf(9) + file, 240)
-        assertArrayEquals(byteArrayOf(9) + file, decode(segments, 240))
-        val wire = ByteArrayOutputStream()
-        segments.flatMap { it.frames }.forEach { frame ->
-            wire.write(frame.size and 255); wire.write(frame.size ushr 8); wire.write(frame)
-        }
-        // Build artifacts, consumed by the opt-in firmware interop test.
-        val folder = File("build/interop").apply { mkdirs() }
-        fun array(name: String, bytes: ByteArray) =
-            "static const unsigned char $name[]={\n" +
-                bytes.toList().chunked(24).joinToString("\n") { row -> row.joinToString(",") { "0x%02x".format(it.toInt() and 255) } + "," } +
-                "\n};\n"
-        File(folder, "android_image_fixture.h").writeText(array("android_image_file", file) + array("android_image_wire", wire.toByteArray()))
-        File(folder, "android_image.bin").writeBytes(file)
     }
 
     private fun crc(bytes: ByteArray): Long = CRC32().apply { update(bytes) }.value

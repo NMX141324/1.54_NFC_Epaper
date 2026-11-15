@@ -7,7 +7,7 @@
 #define IMAGE_FILE_BYTES (IMAGE_HEADER_BYTES+IMAGE_PIXEL_BYTES)
 typedef struct {
     uint32_t state,received,total,packets,segments,retries,errors;
-    uint32_t command,last_control,last_status,crc_profile,peer_crc;
+    uint32_t command,last_control,last_status,peer_crc;
     uint32_t image_id,image_crc,image_valid,refresh_ready,tx_bytes,timeouts;
     uint32_t mailbox_control;
     int32_t link_error;
@@ -31,6 +31,6 @@ const uint8_t *image_transfer_take_frame(void);
 bool image_transfer_refresh_finished(int error,uint32_t elapsed_ms,uint32_t reset_flags,uint32_t now);
 void image_link_init(void);
 void image_link_reply_ready(uint32_t now);
-/* 1: mailbox mode, 0: legacy EEPROM mode. Event-driven, no idle I2C. */
-bool image_link_service(uint32_t now);
+/* Event-driven mailbox service; idle never polls I2C. */
+void image_link_service(uint32_t now);
 #endif

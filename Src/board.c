@@ -200,8 +200,8 @@ int board_i2c_read(uint8_t addr7, uint16_t reg, uint8_t *data, size_t len)
 }
 int board_i2c_write(uint8_t addr7, uint16_t reg, const uint8_t *data, size_t len)
 {
-    /* A mailbox message must be sent in ONE transaction, including all bytes.
-     * Present Password uses 17 bytes; other EEPROM callers retain that cap. */
+    /* A mailbox message is one transaction. Configuration/password writes
+     * are bounded to the maximum 17-byte password presentation. */
     if (!data || !len || len>(reg==0x2008u?256u:17u)) { return -2; }
     int r=address(addr7,reg);
     for (size_t i=0; !r && i<len; ++i) { r=send(data[i]); }

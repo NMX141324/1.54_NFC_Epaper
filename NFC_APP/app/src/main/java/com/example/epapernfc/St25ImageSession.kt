@@ -103,7 +103,7 @@ class St25ImageSession(
         }
         handshakeOk = true
         if (hello.size < 8 || hello[6].toInt() and 1 == 0) {
-            throw IOException("板上固件不支持刷屏结果回执，请先烧录 r7 固件")
+            throw IOException("板上固件不支持刷新完成回执，请更新配套固件")
         }
         val payload = byteArrayOf(9) + file
         val segments = FtmCodec.segments(payload, packetLimit)

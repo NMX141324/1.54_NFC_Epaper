@@ -24,8 +24,7 @@ class St25CommandsTest {
         }
     }
 
-    /** Simulated RF arbiter: addressed custom commands cannot resolve UID while
-     * I2C is using the Mailbox. This reproduces the old APP's no-response case. */
+    /** Mailbox commands must remain non-addressed while I2C arbitrates access. */
     @Test fun handshakeWorksWhenI2cArbitrationRejectsAddressedCustomCommands() {
         val hello = byteArrayOf(0x40, 6, 0x80.toByte(), 0x81.toByte(), 0xff.toByte(), 5, 0, 0)
         var enabled = false

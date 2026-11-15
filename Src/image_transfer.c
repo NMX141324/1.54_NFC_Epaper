@@ -1,31 +1,23 @@
-/* ST25FTM wire format: ST UM2062 appendix A / AN5512.
- * Application command 04 is used as a FILE transport only: no Flash writes,
- * option-byte changes, firmware execution, or JPEG decoding occur here. */
+/* NFC image protocol: ST25FTM framing, IEEE CRC32 and E6IM pixels. */
 #include "image_transfer.h"
 #include <string.h>
 
 volatile image_debug_t g_image_debug;
 static uint8_t image_file[IMAGE_FILE_BYTES];
-static uint8_t small[64],response[32];
+static uint8_t response[32];
 static struct {
-    uint32_t received,total,committed,segment_len,segment_start,last_tick;
-    uint32_t crc_be,crc_ieee,crc_le,word,word_bytes;
-    uint32_t tx_length,tx_offset,tx_chunk;
-    uint8_t cmd,expected_id,ack,tx_kind,profile;
-    bool rx,segment,duplicate,duplicate_after_done,finish,ack_pending,inflight,tx,readback;
-    bool password_ok,valid,refresh_after_response,refresh_ready,wait_refresh;
+    uint32_t received,total,committed,segment_len,last_tick;
+    uint32_t segment_crc;
+    uint32_t tx_length;
+    uint8_t cmd,expected_id,ack,tx_kind;
+    bool rx,segment,duplicate,duplicate_after_done,finish,ack_pending,inflight,tx;
+    bool valid,refresh_after_response,refresh_ready,wait_refresh;
 } f;
 
 static uint32_t le32(const uint8_t *p)
 { return (uint32_t)p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24); }
 static uint32_t be32(const uint8_t *p)
 { return ((uint32_t)p[0]<<24)|((uint32_t)p[1]<<16)|((uint32_t)p[2]<<8)|p[3]; }
-static uint32_t crc_be_byte(uint32_t c,uint8_t b)
-{
-    c^=(uint32_t)b<<24;
-    for (unsigned i=0;i<8u;++i) { c=(c<<1)^((c&0x80000000u)?0x04c11db7u:0u); }
-    return c;
-}
 static uint32_t crc_ieee_byte(uint32_t c,uint8_t b)
 {
     c^=b;
@@ -51,35 +43,12 @@ int image_file_validate(const uint8_t *p,uint32_t n)
     }
     return 0;
 }
-static void crc_start(void)
-{ f.crc_be=f.crc_ieee=f.crc_le=0xffffffffu; f.word=0u; f.word_bytes=0u; }
+static void crc_start(void) { f.segment_crc=0xffffffffu; }
 static void crc_add(const uint8_t *p,uint32_t n)
 {
-    while (n--) {
-        uint8_t b=*p++;
-        f.crc_be=crc_be_byte(f.crc_be,b); f.crc_ieee=crc_ieee_byte(f.crc_ieee,b);
-        f.word|=(uint32_t)b<<(8u*f.word_bytes++);
-        if (f.word_bytes==4u) {
-            for (unsigned i=0;i<4u;++i) { f.crc_le=crc_be_byte(f.crc_le,(uint8_t)(f.word>>(24u-8u*i))); }
-            f.word=0u; f.word_bytes=0u;
-        }
-    }
+    while (n--) { f.segment_crc=crc_ieee_byte(f.segment_crc,*p++); }
 }
-static bool crc_matches(uint32_t peer)
-{
-    /* ST's older ports pad to a word; newer ports can feed bytes directly.
-     * Lock the detected 32-bit CRC profile for the rest of a command. */
-    uint32_t values[4]={f.crc_be,f.crc_be,f.crc_le,f.crc_ieee^0xffffffffu};
-    if (f.word_bytes) {
-        for (unsigned i=f.word_bytes;i<4u;++i) { values[1]=crc_be_byte(values[1],0u); }
-        for (unsigned i=0;i<4u;++i) { values[2]=crc_be_byte(values[2],(uint8_t)(f.word>>(24u-8u*i))); }
-    }
-    if (f.profile) { return values[f.profile-1u]==peer; }
-    for (unsigned i=0;i<4u;++i) {
-        if (values[i]==peer) { f.profile=(uint8_t)(i+1u);g_image_debug.crc_profile=f.profile;return true; }
-    }
-    return false;
-}
+static bool crc_matches(uint32_t peer) { return (f.segment_crc^0xffffffffu)==peer; }
 void image_transfer_init(void)
 {
     memset(&f,0,sizeof f);memset((void*)&g_image_debug,0,sizeof g_image_debug);
@@ -87,7 +56,7 @@ void image_transfer_init(void)
 static void reply(uint8_t status,uint32_t extra)
 {
     response[0]=(uint8_t)(f.cmd|0x80u);response[1]=status;
-    f.tx=true;f.readback=false;f.tx_offset=0u;f.tx_length=2u+extra;
+    f.tx=true;f.tx_length=2u+extra;
     g_image_debug.last_status=status;
 }
 static void command_complete(void)
@@ -97,27 +66,18 @@ static void command_complete(void)
     if (f.cmd==0u) {
         reply(0x81u,4u);response[2]=0xffu;response[3]=5u;
         response[4]=1u;response[5]=0u; /* capability bit0: command 09 completion */
-    } else if (f.cmd==7u) {
-        f.password_ok=(data_length==4u &&
-            (be32(small)==0x12345678u || le32(small)==0x12345678u)) ||
-            (data_length==8u && !memcmp(small,"12345678",8u));
-        reply(f.password_ok?0x81u:0x85u,0u);
-    } else if (f.cmd==4u || f.cmd==5u || f.cmd==1u || f.cmd==9u) {
-        int r=(f.cmd==4u && !f.password_ok) ? -23 : image_file_validate(image_file,data_length);
+    } else if (f.cmd==9u) {
+        int r=image_file_validate(image_file,data_length);
         if (!r) {
             f.valid=true;f.refresh_after_response=true;
             g_image_debug.image_id=le32(image_file+16);g_image_debug.image_crc=le32(image_file+20);
             g_image_debug.image_valid=1u;reply(0x81u,0u);
-            f.wait_refresh=f.cmd==9u;
+            f.wait_refresh=true;
             g_image_debug.refresh_state=1u; /* received, not yet displayed */
         } else {
             ++g_image_debug.errors;++g_image_debug.protocol_errors;
             g_image_debug.link_error=r;reply(0x82u,0u);
         }
-    } else if (f.cmd==6u || f.cmd==2u) {
-        if (f.valid) {
-            reply(0x81u,0u);f.readback=true;f.tx_length=2u+IMAGE_FILE_BYTES;
-        } else { reply(0x85u,0u); }
     } else { reply(0x84u,0u); }
 }
 static void store_payload(const uint8_t *p,uint32_t n)
@@ -126,14 +86,14 @@ static void store_payload(const uint8_t *p,uint32_t n)
         uint32_t offset=f.received+i;
         if (!offset) {
             f.cmd=p[i];g_image_debug.command=f.cmd;
-            if (f.cmd==1u || f.cmd==4u || f.cmd==5u || f.cmd==9u) {
+            if (f.cmd==9u) {
                 f.valid=false;f.refresh_ready=false;f.refresh_after_response=false;
                 f.wait_refresh=false;g_image_debug.refresh_state=0u;
                 g_image_debug.image_valid=0u;g_image_debug.refresh_ready=0u;
             }
-        } else if (f.cmd==1u || f.cmd==4u || f.cmd==5u || f.cmd==9u) {
+        } else if (f.cmd==9u) {
             image_file[offset-1u]=p[i];
-        } else if (offset<=sizeof small) { small[offset-1u]=p[i]; }
+        }
     }
 }
 static int packet_error(void)
@@ -174,14 +134,13 @@ int image_transfer_receive(const uint8_t *p,uint32_t n,uint32_t now)
         /* A FIRST/SINGLE packet starts a new command, including retransmission
          * of its first segment. Never retain bytes from an abandoned command. */
         f.rx=true;f.received=0u;f.committed=0u;f.total=total;
-        f.expected_id=0u;f.segment=false;f.duplicate=false;f.segment_len=0u;f.profile=0u;
+        f.expected_id=0u;f.segment=false;f.duplicate=false;f.segment_len=0u;
         f.duplicate_after_done=false;
-        g_image_debug.crc_profile=0u;
         g_image_debug.total=total;g_image_debug.received=0u;g_image_debug.state=1u;
     } else if (!f.rx) { return packet_error(); }
     if (segmented && (ac&1u)) {
         if (f.segment_len) { ++g_image_debug.retries; }
-        f.received=f.committed;f.segment_start=f.committed;f.segment_len=0u;
+        f.received=f.committed;f.segment_len=0u;
         f.segment=true;f.duplicate=id!=f.expected_id;
         if (f.duplicate) { ++g_image_debug.retries; }
         crc_start();
@@ -211,30 +170,15 @@ int image_transfer_receive(const uint8_t *p,uint32_t n,uint32_t now)
     } else if (last) { return packet_error(); }
     return 0;
 }
-static uint8_t tx_byte(uint32_t offset)
-{
-    if (f.readback) {
-        if (offset==0u) { return (uint8_t)(f.cmd|0x80u); }
-        if (offset==1u) { return 0x81u; }
-        return image_file[offset-2u];
-    }
-    return response[offset];
-}
 bool image_transfer_next_tx(uint8_t p[256],uint16_t *n)
 {
     if (f.inflight) { return false; }
     if (f.ack_pending) { p[0]=f.ack;*n=1u;f.tx_kind=1u;return true; }
     if (!f.tx) { return false; }
-    uint32_t remaining=f.tx_length-f.tx_offset,amount=remaining>240u?240u:remaining;
-    uint32_t h=2u;
-    uint8_t pos=f.tx_length<=240u?0u:(!f.tx_offset?1u:(remaining<=240u?3u:2u));
-    p[0]=(uint8_t)(0x40u|(pos<<2));p[1]=(uint8_t)amount;
-    if (pos==1u) {
-        p[2]=(uint8_t)(f.tx_length>>24);p[3]=(uint8_t)(f.tx_length>>16);
-        p[4]=(uint8_t)(f.tx_length>>8);p[5]=(uint8_t)f.tx_length;h+=4u;
-    }
-    for (uint32_t i=0;i<amount;++i) { p[h+i]=tx_byte(f.tx_offset+i); }
-    *n=(uint16_t)(h+amount);f.tx_chunk=amount;f.tx_kind=2u;return true;
+    p[0]=0x40u;p[1]=(uint8_t)f.tx_length;
+    memcpy(p+2u,response,f.tx_length);
+    *n=(uint16_t)(2u+f.tx_length);f.tx_kind=2u;
+    return true;
 }
 void image_transfer_sent(uint32_t now) { f.inflight=true;f.last_tick=now; }
 bool image_transfer_inflight(void) { return f.inflight; }
@@ -254,16 +198,15 @@ void image_transfer_released(uint32_t now)
             else if (f.finish && !f.duplicate) { command_complete(); }
         } else { f.received=f.committed;f.segment_len=0u;f.segment=false; }
     } else {
-        f.tx_offset+=f.tx_chunk;g_image_debug.tx_bytes+=f.tx_chunk;
-        if (f.tx_offset==f.tx_length) {
-            f.tx=false;g_image_debug.state=0u;
-            if (f.refresh_after_response && f.valid) {
-                f.refresh_ready=true;f.refresh_after_response=false;
-                g_image_debug.refresh_ready=1u;
-            }
+        g_image_debug.tx_bytes+=f.tx_length;
+        f.tx=false;g_image_debug.state=0u;
+        if (f.refresh_after_response && f.valid) {
+            f.refresh_ready=true;f.refresh_after_response=false;
+            g_image_debug.refresh_ready=1u;
         }
     }
 }
+
 bool image_transfer_tick(uint32_t now)
 {
     if ((f.rx || f.tx || f.inflight || f.ack_pending) && (uint32_t)(now-f.last_tick)>15000u) {
@@ -286,9 +229,7 @@ void image_transfer_link_closed(void)
         g_image_debug.refresh_ready=0u;
         g_image_debug.refresh_state=4u;g_image_debug.refresh_error=-26;
     }
-    /* Keep refresh_ready only if the final command response was actually
-     * consumed by RF for legacy commands. Closing a command09 session never
-     * starts a new refresh. */
+    /* Closing a session never starts a new refresh. */
 }
 const uint8_t *image_transfer_take_frame(void)
 {
