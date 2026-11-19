@@ -11,7 +11,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -30,36 +29,34 @@ class MainActivity : ComponentActivity() {
         adapter = NfcAdapter.getDefaultAdapter(this)
         setContent {
             EpaperNFCTheme {
-                val state = editor.state
-                val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument(), ::importPhoto)
-                val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia(), ::importPhoto)
-                val galleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                    importPhoto(uri)
+                }
+                val gallery = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                     if (result.resultCode == RESULT_OK) importPhoto(result.data?.data)
                 }
-                val saveBin = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
-                    if (uri != null) editor.state.image?.let { editor.export(uri, false, it) }
-                }
-                val savePng = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("image/png")) { uri ->
-                    if (uri != null) editor.state.image?.let { editor.export(uri, true, it) }
-                }
                 EditorScreen(
-                    state = state, hasNfc = adapter != null, nfcEnabled = nfcEnabled,
+                    state = editor.state, hasNfc = adapter != null, nfcEnabled = nfcEnabled,
                     onImport = {
-                        runCatching { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
-                            .onFailure { editor.report("无法打开系统相册，请尝试其他导入方式") }
+                        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply {
+                            type = "image/*"
+                        }
+                        runCatching {
+                            if (intent.resolveActivity(packageManager) != null) {
+                                gallery.launch(Intent.createChooser(intent, "选择照片"))
+                            } else picker.launch(arrayOf("image/*"))
+                        }
+                            .onFailure {
+                                runCatching { picker.launch(arrayOf("image/*")) }
+                                    .onFailure { editor.report("无法打开相册，请检查相册应用") }
+                            }
                     },
-                    onImportGallery = {
-                        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI).apply { type = "image/*" }
-                        runCatching { galleryPicker.launch(Intent.createChooser(intent, "选择相册应用")) }
-                            .onFailure { editor.report("本机没有支持选图的相册应用，请使用系统相册或从文件选择") }
-                    },
-                    onImportFile = { picker.launch(arrayOf("image/*")) },
                     onDither = editor::dither,
                     onSettings = editor::update,
-                    onSend = editor::arm, onCancel = editor::cancelTransfer,
-                    onNfcSettings = { startActivity(Intent(Settings.ACTION_NFC_SETTINGS)) },
-                    onSaveBin = { saveBin.launch("epaper_${System.currentTimeMillis()}.bin") },
-                    onSavePng = { savePng.launch("epaper_preview_${System.currentTimeMillis()}.png") }
+                    onGestureStart = editor::beginGesture,
+                    onSend = editor::arm,
+                    onCancel = editor::cancelTransfer,
+                    onNfcSettings = { startActivity(Intent(Settings.ACTION_NFC_SETTINGS)) }
                 )
             }
         }
@@ -79,7 +76,7 @@ class MainActivity : ComponentActivity() {
                 adapter?.enableReaderMode(this, { tag -> runOnUiThread { editor.onTag(tag) } },
                     NfcAdapter.FLAG_READER_NFC_V or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
                     Bundle().apply { putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 250) })
-            }.onFailure { editor.report("无法启用 NFC：${it.message}") }
+            }.onFailure { editor.report("无法启用 NFC") }
         }
     }
 

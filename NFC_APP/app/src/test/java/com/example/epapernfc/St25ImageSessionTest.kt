@@ -19,6 +19,7 @@ class St25ImageSessionTest {
         var enabled = false
         var busyUntil = 0L
         var readyAt = 0L
+        var hostReadDelay = 25L
         var enableRefusals = 2
         var writeRefusals = 0
         var consumedReplies = 0
@@ -80,7 +81,7 @@ class St25ImageSessionTest {
                 0xad -> byteArrayOf(0, when {
                     !enabled || dropMailbox || (losePowerDuringRefresh && completionDue != null) -> 0
                     timeout -> 5
-                    pending.isNotEmpty() && now < readyAt -> 5
+                    now < readyAt -> 5
                     pending.isNotEmpty() -> 0x43
                     else -> 0x41
                 }.toByte())
@@ -100,6 +101,7 @@ class St25ImageSessionTest {
                 }
                 0xaa -> {
                     assertTrue(enabled && pending.isEmpty())
+                    assertTrue("RF must not overwrite an unread host message", now >= readyAt)
                     val frame = request.copyOfRange(4, request.size)
                     assertEquals(frame.size - 1, request[3].toInt() and 255)
                     writes++
@@ -134,16 +136,16 @@ class St25ImageSessionTest {
                             }
                         }
                     }
-                    readyAt = now + 25
+                    readyAt = now + hostReadDelay
                     byteArrayOf(0)
                 }
                 else -> error("unexpected RF command $code")
             }
         }
     }
-    private fun setup(chip: Chip, limit: Int = 240): Pair<St25ImageSession, St25CommandChannel> {
+    private fun setup(chip: Chip, limit: Int = 240, adaptive: Boolean = true): Pair<St25ImageSession, St25CommandChannel> {
         val channel = St25CommandChannel(uid, limit + 4, chip::exchange, { chip.now += it }, {})
-        val session = St25ImageSession(channel, limit, { chip.now }, { chip.now += it }, {})
+        val session = St25ImageSession(channel, limit, { chip.now }, { chip.now += it }, {}, adaptive)
         return session to channel
     }
     @Test fun wholeImageSurvivesEnableAndReportedSegmentBoundaryBusyRefusals() {
@@ -168,6 +170,31 @@ class St25ImageSessionTest {
         session.send(file) { _, _ -> }
         assertArrayEquals(byteArrayOf(9) + file, chip.assembled.toByteArray())
         assertEquals(28833, session.confirmedOffset)
+    }
+    @Test fun adaptivePacingCutsIdleTimeWithoutSkippingMailboxOwnershipOrPanelResult() {
+        val legacyChip = Chip()
+        val (legacy, _) = setup(legacyChip, adaptive = false)
+        legacy.send(file) { _, _ -> }
+        val chip = Chip()
+        val (session, _) = setup(chip)
+        session.send(file) { _, _ -> }
+        assertArrayEquals(legacyChip.assembled.toByteArray(), chip.assembled.toByteArray())
+        assertEquals(legacyChip.writes, chip.writes)
+        assertEquals(legacyChip.consumedReplies, chip.consumedReplies)
+        assertTrue("Must save idle time against the same host model", session.uploadElapsedMs < legacy.uploadElapsedMs)
+        assertTrue(session.writeGuardMs < 50L)
+        assertEquals(18, chip.consumedReplies)
+        assertTrue(chip.completionQueued)
+        println("Mailbox model only: fixed50=${legacy.uploadElapsedMs}ms adaptive=${session.uploadElapsedMs}ms")
+    }
+    @Test fun slowerHostRaisesGuardInsteadOfOverwritingUnreadPackets() {
+        val chip = Chip().apply { hostReadDelay = 90 }
+        val (session, _) = setup(chip)
+        session.send(file) { _, _ -> }
+        assertArrayEquals(byteArrayOf(9) + file, chip.assembled.toByteArray())
+        assertEquals(28833, session.confirmedOffset)
+        assertTrue(session.writeGuardMs > 50L && session.writeGuardMs <= 80L)
+        assertEquals(15, chip.segments)
     }
     @Test fun ioFailureDoesNotResendAnAmbiguousWriteOrAdvanceConfirmedProgress() {
         val chip = Chip().apply { failAtSegment = 4 }

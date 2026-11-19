@@ -86,8 +86,17 @@ object EpaperCodec {
 
     fun crc(bytes: ByteArray): Long = CRC32().apply { update(bytes) }.value
 
+    /** Housing mounts the panel upside down. Reverse pixels, including both nibbles per byte. */
+    fun rotate180(raw: ByteArray): ByteArray {
+        require(raw.size == PIXEL_BYTES)
+        return ByteArray(raw.size) { i ->
+            val pair = raw[raw.lastIndex - i].toInt() and 255
+            ((pair ushr 4) or ((pair and 15) shl 4)).toByte()
+        }
+    }
+
     fun file(raw: ByteArray, imageId: Int): ByteArray {
-        preview(raw) // Validate before exporting or sending.
+        preview(raw) // Validate before sending.
         val header = ByteBuffer.allocate(32).order(ByteOrder.LITTLE_ENDIAN)
             .put(byteArrayOf(69, 54, 73, 77)).put(1.toByte()).put(1.toByte())
             .putShort(32.toShort()).putShort(SIZE.toShort()).putShort(SIZE.toShort())

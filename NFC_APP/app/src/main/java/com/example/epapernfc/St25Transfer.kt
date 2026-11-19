@@ -57,8 +57,9 @@ class St25Transfer(private val tag: Tag) {
             }) { fraction, message ->
                 stage = message
                 progress(fraction, message)
-                Log.i("EpaperNfc", "stage=$message confirmed=${transferSession.confirmedOffset} busyRetries=${rf.busyRetries}")
+                Log.i("EpaperNfc", "stage=$message confirmed=${transferSession.confirmedOffset} busyRetries=${rf.busyRetries} writeGuardMs=${transferSession.writeGuardMs}")
             }
+            Log.i("EpaperNfc", "completed uploadMs=${transferSession.uploadElapsedMs} panelRefreshMs=$refreshElapsed busyRetries=${rf.busyRetries}")
         } catch (e: Exception) {
             rfLost = e is TagLostException
             if (cancelled.get()) throw IOException("传输已取消", e)

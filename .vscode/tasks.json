@@ -2,19 +2,37 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Firmware: Build Debug",
+      "label": "编译固件（Release）",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/tools/build.ps1"],
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/tools/build.ps1", "-Configuration", "Release"],
       "group": {"kind": "build", "isDefault": true},
       "problemMatcher": "$gcc"
     },
     {
-      "label": "Firmware: Flash Debug (external 3.3V)",
+      "label": "编译并烧录（Release）",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/tools/flash.ps1"],
-      "dependsOn": "Firmware: Build Debug",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/tools/flash.ps1", "-Configuration", "Release"],
+      "dependsOn": "编译固件（Release）",
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "编译固件（Debug）",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/tools/build.ps1", "-Configuration", "Debug"],
+      "group": "build",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "编译并烧录（Debug）",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/tools/flash.ps1", "-Configuration", "Debug"],
+      "dependsOn": "编译固件（Debug）",
+      "dependsOrder": "sequence",
       "problemMatcher": []
     }
   ]

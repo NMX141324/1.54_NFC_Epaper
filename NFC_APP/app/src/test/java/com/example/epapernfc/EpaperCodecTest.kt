@@ -53,6 +53,35 @@ class EpaperCodecTest {
 
     @Test fun crcUsesIeeeProfile() { assertEquals(0xcbf43926L, EpaperCodec.crc("123456789".toByteArray())) }
 
+    @Test fun panelRotationReversesCoordinatesAndKeepsPreviewPixelsUnchanged() {
+        val raw = ByteArray(EpaperCodec.PIXEL_BYTES) { i ->
+            val x = (i * 2) % 240
+            val y = (i * 2) / 240
+            ((EpaperCodec.codes[(x / 17 + y / 11) % 6] shl 4) or
+                EpaperCodec.codes[((x + 1) / 17 + y / 11) % 6]).toByte()
+        }
+        raw[0] = 0x01
+        raw[raw.lastIndex] = 0x56
+        val original = raw.copyOf()
+        val uprightPreview = EpaperCodec.preview(raw)
+        val rotated = EpaperCodec.rotate180(raw)
+        val panelPixels = EpaperCodec.preview(rotated)
+        assertEquals(0x65, rotated[0].toInt() and 255)
+        assertEquals(0x10, rotated[rotated.lastIndex].toInt() and 255)
+        for (y in 0 until 240) for (x in 0 until 240) {
+            assertEquals(uprightPreview[(239 - y) * 240 + 239 - x], panelPixels[y * 240 + x])
+        }
+        assertArrayEquals(original, raw)
+        assertArrayEquals(uprightPreview, EpaperCodec.preview(raw))
+        assertArrayEquals(raw, EpaperCodec.rotate180(rotated))
+        val file = EpaperCodec.file(rotated, 123)
+        val header = ByteBuffer.wrap(file).order(ByteOrder.LITTLE_ENDIAN)
+        assertEquals(123, header.getInt(16))
+        assertArrayEquals(rotated, file.copyOfRange(32, file.size))
+        assertEquals(crc(rotated), header.getInt(20).toLong() and 0xffffffffL)
+        assertEquals(crc(file.copyOfRange(0, 28)), header.getInt(28).toLong() and 0xffffffffL)
+    }
+
     /** Independent wire decoder, checking field lengths, sequence, segment CRC and total length. */
     private fun decode(segments: List<FtmSegment>, packetLimit: Int): ByteArray {
         val output = ByteArrayOutputStream()

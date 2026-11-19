@@ -2,14 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "STM32G070: ST-Link Debug",
+      "name": "STM32G070：烧录并调试（ST-Link）",
       "type": "stlinkgdbtarget",
       "request": "launch",
       "cwd": "${workspaceFolder}",
       "deviceName": "STM32G070CBT6",
       "deviceCore": "Cortex-M0+",
       "runEntry": "main",
-      "preLaunchTask": "Firmware: Build Debug",
+      "preLaunchTask": "编译固件（Debug）",
       "imagesAndSymbols": [
         {
           "imageFileName": "${workspaceFolder}/build/Debug/epaper_NFC.elf",

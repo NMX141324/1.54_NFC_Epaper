@@ -15,7 +15,7 @@ android {
         applicationId = "com.example.epapernfc"
         minSdk = 24
         targetSdk = 37
-        versionCode = 6
+        versionCode = 9
         versionName = appVersion
 
     }

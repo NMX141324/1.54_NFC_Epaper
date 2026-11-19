@@ -13,7 +13,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -21,7 +20,7 @@ import kotlinx.coroutines.withContext
 data class EditorState(
     val settings: EditSettings = EditSettings(),
     val image: RenderedImage? = null,
-    val adjusted: Bitmap? = null,
+    val source: Bitmap? = null,
     val processing: Boolean = false,
     val dithering: Boolean = false,
     val showTransferDialog: Boolean = false,
@@ -46,9 +45,8 @@ class EditorViewModel(app: Application, private val saved: SavedStateHandle) : A
     )
     var state by mutableStateOf(EditorState(settings = restored()))
         private set
-    private var source: Bitmap? = null
+    private var sourceBitmap: Bitmap? = null
     private var loadJob: Job? = null
-    private var renderJob: Job? = null
     private var ditherJob: Job? = null
     private var sendJob: Job? = null
     private var transport: St25Transfer? = null
@@ -59,22 +57,21 @@ class EditorViewModel(app: Application, private val saved: SavedStateHandle) : A
     fun load(uri: Uri, reset: Boolean = true) {
         if (state.waiting || state.sending) return
         loadJob?.cancel()
-        renderJob?.cancel()
         ditherJob?.cancel()
-        state = state.copy(processing = true, dithering = false, image = null, adjusted = null,
+        state = state.copy(processing = true, dithering = false, image = null, source = null,
             hasSource = false, error = null, status = "正在读取照片…")
         loadJob = viewModelScope.launch {
             try {
                 val bitmap = withContext(Dispatchers.IO) {
                     ImageProcessor.load(getApplication<Application>().contentResolver, uri)
                 }
-                source = bitmap
+                sourceBitmap = bitmap
                 saved["uri"] = uri.toString()
-                state = state.copy(hasSource = true, settings = if (reset) EditSettings() else state.settings)
+                state = state.copy(hasSource = true, source = bitmap, processing = false, settings = if (reset) EditSettings() else state.settings)
                 update(state.settings)
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
-                state = state.copy(processing = false, error = "导入失败：${e.message}", hasSource = source != null)
+                state = state.copy(processing = false, error = "导入失败：${e.message}", hasSource = sourceBitmap != null, source = sourceBitmap)
             } catch (_: OutOfMemoryError) {
                 state = state.copy(processing = false, error = "照片过大，内存不足，请选择较小图片")
             }
@@ -89,35 +86,31 @@ class EditorViewModel(app: Application, private val saved: SavedStateHandle) : A
         saved["saturation"] = settings.saturation; saved["algorithm"] = settings.algorithm.name
         saved["strength"] = settings.strength
         ditherJob?.cancel()
-        state = state.copy(settings = settings, image = null, processing = source != null,
-            dithering = false, progress = 0f, showTransferDialog = false, error = null,
-            status = "编辑完成后，点击「开始抖动」生成六色图")
-        renderJob?.cancel()
-        val bitmap = source ?: return
-        renderJob = viewModelScope.launch {
-            delay(32) // Coalesce gestures; preview never runs quantization.
-            try {
-                val adjusted = withContext(Dispatchers.Default) { ImageProcessor.adjust(bitmap, settings) }
-                state = state.copy(adjusted = adjusted, processing = false,
-                    status = "调色预览已更新，请点击「开始抖动」")
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { state = state.copy(processing = false, error = "图像处理失败：${e.message}") }
-        }
+        state = state.copy(settings = settings, image = null, dithering = false,
+            progress = 0f, showTransferDialog = false, refreshCompleted = false, error = null)
+    }
+
+    fun beginGesture() {
+        if (state.waiting || state.sending || !state.hasSource) return
+        ditherJob?.cancel()
+        state = state.copy(image = null, refreshCompleted = false, error = null)
     }
 
     fun dither() {
         if (state.processing || state.dithering || state.waiting || state.sending) return
-        val adjusted = state.adjusted ?: return
+        val bitmap = sourceBitmap ?: return
         val settings = state.settings
         state = state.copy(dithering = true, error = null, status = "正在生成六色图…")
         ditherJob = viewModelScope.launch {
             try {
                 val rendered = withContext(Dispatchers.Default) {
                     val context = coroutineContext
+                    val adjusted = ImageProcessor.adjust(bitmap, settings)
+                    context.ensureActive()
                     ImageProcessor.dither(adjusted, settings) { context.ensureActive() }
                 }
                 state = state.copy(image = rendered, dithering = false,
-                    status = "六色图已生成 · 240 × 240 · 可以发送或导出")
+                    status = "六色预览已生成，可以传输到墨水屏")
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 state = state.copy(dithering = false, error = "抖动处理失败：${e.message}")
@@ -160,8 +153,7 @@ class EditorViewModel(app: Application, private val saved: SavedStateHandle) : A
             catch (e: Exception) {
                 if (transport === link) state = state.copy(sending = false,
                     refreshing = false, refreshCompleted = false,
-                    error = if (link.imageAccepted) "图片已传完，但未确认刷新完成：${e.message ?: "NFC 连接断开"}。请保持供电，不会自动重刷。"
-                        else "传输失败：${e.message ?: "NFC 连接断开"}。移开手机后重新点击发送，将从整图开始。")
+                    error = transferErrorSummary(e, link.imageAccepted))
             } finally {
                 if (transport === link) { transport = null; pendingFile = null }
             }
@@ -182,22 +174,6 @@ class EditorViewModel(app: Application, private val saved: SavedStateHandle) : A
     }
 
     fun report(message: String) { state = state.copy(error = message) }
-
-    fun export(uri: Uri, png: Boolean, image: RenderedImage) {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    getApplication<Application>().contentResolver.openOutputStream(uri).use { stream ->
-                        requireNotNull(stream) { "无法打开目标文件" }
-                        if (png) check(image.preview.compress(Bitmap.CompressFormat.PNG, 100, stream))
-                        else stream.write(image.file)
-                    }
-                }
-                state = state.copy(status = if (png) "六色预览 PNG 已保存" else "E6IM 数据文件已保存，可供 ST25 NFC Tap 发送")
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { report("保存失败：${e.message}") }
-        }
-    }
 
     override fun onCleared() {
         transport?.let { link -> Thread { link.cancel() }.start() }

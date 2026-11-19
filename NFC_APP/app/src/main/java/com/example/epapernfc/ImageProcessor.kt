@@ -11,22 +11,8 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
-import kotlin.math.min
 
-data class EditSettings(
-    val zoom: Float = 1f,
-    val rotation: Float = 0f,
-    val panX: Float = 0f,
-    val panY: Float = 0f,
-    val fill: Boolean = true,
-    val brightness: Float = 0f,
-    val contrast: Float = 1f,
-    val saturation: Float = 1f,
-    val algorithm: Dither = Dither.FLOYD_STEINBERG,
-    val strength: Float = 1f
-)
-
-data class RenderedImage(val adjusted: Bitmap, val preview: Bitmap, val file: ByteArray)
+data class RenderedImage(val preview: Bitmap, val file: ByteArray)
 
 object ImageProcessor {
     /** Bounded decode avoids loading full-resolution camera images into memory. */
@@ -59,33 +45,40 @@ object ImageProcessor {
         return if (matrix.isIdentity) bitmap else Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
+    /** Reusable paint and matrix: no bitmap allocation during a gesture. */
+    class Painter {
+        private val matrix = Matrix()
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        private var colorKey: Triple<Float, Float, Float>? = null
+        fun draw(canvas: Canvas, source: Bitmap, settings: EditSettings, size: Float) {
+            val key = Triple(settings.brightness, settings.contrast, settings.saturation)
+            if (colorKey != key) {
+                val saturation = ColorMatrix().apply { setSaturation(settings.saturation) }
+                val c = settings.contrast
+                val shift = (1f - c) * 127.5f + settings.brightness * 255f
+                val adjustment = ColorMatrix(floatArrayOf(
+                    c, 0f, 0f, 0f, shift, 0f, c, 0f, 0f, shift,
+                    0f, 0f, c, 0f, shift, 0f, 0f, 0f, 1f, 0f
+                )).apply { postConcat(saturation) }
+                paint.colorFilter = ColorMatrixColorFilter(adjustment)
+                colorKey = key
+            }
+            val transform = photoTransform(source.width, source.height, size, settings)
+            matrix.reset()
+            matrix.postTranslate(-source.width / 2f, -source.height / 2f)
+            matrix.postRotate(settings.rotation)
+            matrix.postScale(transform.scale, transform.scale)
+            matrix.postTranslate(transform.centerX, transform.centerY)
+            canvas.drawBitmap(source, matrix, paint)
+        }
+    }
+
     fun adjust(source: Bitmap, settings: EditSettings): Bitmap {
         val size = EpaperCodec.SIZE
         val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
         canvas.drawColor(Color.WHITE)
-        val quarterTurn = settings.rotation.toInt() % 180 != 0
-        val width = if (quarterTurn) source.height else source.width
-        val height = if (quarterTurn) source.width else source.height
-        val ratio = if (settings.fill) maxOf(size.toFloat() / width, size.toFloat() / height)
-                    else min(size.toFloat() / width, size.toFloat() / height)
-        val matrix = Matrix().apply {
-            postTranslate(-source.width / 2f, -source.height / 2f)
-            postRotate(settings.rotation)
-            postScale(ratio * settings.zoom, ratio * settings.zoom)
-            postTranslate(size / 2f + settings.panX * size, size / 2f + settings.panY * size)
-        }
-        val saturation = ColorMatrix().apply { setSaturation(settings.saturation) }
-        val c = settings.contrast
-        val shift = (1f - c) * 127.5f + settings.brightness * 255f
-        val adjustment = ColorMatrix(floatArrayOf(
-            c, 0f, 0f, 0f, shift, 0f, c, 0f, 0f, shift,
-            0f, 0f, c, 0f, shift, 0f, 0f, 0f, 1f, 0f
-        )).apply { postConcat(saturation) }
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-            colorFilter = ColorMatrixColorFilter(adjustment)
-        }
-        canvas.drawBitmap(source, matrix, paint)
+        Painter().draw(canvas, source, settings, size.toFloat())
         return output
     }
 
@@ -97,6 +90,8 @@ object ImageProcessor {
         adjusted.getPixels(pixels, 0, size, 0, 0, size, size)
         val raw = EpaperCodec.quantize(pixels, settings.algorithm, settings.strength, check)
         val preview = Bitmap.createBitmap(EpaperCodec.preview(raw), size, size, Bitmap.Config.ARGB_8888)
-        return RenderedImage(adjusted, preview, EpaperCodec.file(raw, (System.currentTimeMillis() / 1000).toInt()))
+        // Keep the editor preview upright; compensate only the panel's transmitted pixels.
+        val panelRaw = EpaperCodec.rotate180(raw)
+        return RenderedImage(preview, EpaperCodec.file(panelRaw, (System.currentTimeMillis() / 1000).toInt()))
     }
 }
